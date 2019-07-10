@@ -1,0 +1,2 @@
+File::path is a class method that takes a an argument and returns the string representation of a path.
+File#path is called on an instance of the File class and returns the path of that file.
