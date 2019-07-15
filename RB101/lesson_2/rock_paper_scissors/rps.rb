@@ -6,13 +6,15 @@ def prompt(message)
   puts "=> #{message}"
 end
 
-def display_results(choice, computer_choice)
-  return(prompt('It is a tie!')) if choice == computer_choice
+def player_wins?(player, computer)
+  x, y = [player, computer].map { |c| VALID_CHOICES.index(c) }
+  (x > y) ^ ((x - y).abs == 2)
+end
 
-  x, y = [choice, computer_choice].map { |c| VALID_CHOICES.index(c) }
-  did_player_win = (x > y) ^ ((x - y).abs == 2)
+def display_results(player, computer)
+  return prompt('It is a tie!') if player == computer
 
-  prompt(did_player_win ? 'You won!' : 'Computer won. :(')
+  prompt(player_wins?(player, computer) ? 'You won!' : 'Computer won. :(')
 end
 
 loop do
