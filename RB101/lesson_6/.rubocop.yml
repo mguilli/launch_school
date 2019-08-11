@@ -144,14 +144,14 @@ Style/PercentLiteralDelimiters:
   Enabled: true
   PreferredDelimiters:
     '%':  ()
-    '%i': ()
-    '%I': ()
+    '%i': '[]'
+    '%I': '[]'
     '%q': ()
     '%Q': ()
-    '%r': ()
+    '%r': '{}'
     '%s': ()
-    '%w': ()
-    '%W': ()
+    '%w': '[]'
+    '%W': '[]'
     '%x': ()
 
 Style/PerlBackrefs:
@@ -194,6 +194,11 @@ Style/SingleLineMethods:
 
 Layout/SpaceAroundEqualsInParameterDefault:
   Enabled: false
+
+Layout/SpaceInsideHashLiteralBraces:
+  Description: >-
+                  No spaces in hash literals: {a: 1, b: 2}
+  EnforcedStyle: no_space
 
 Style/StringLiterals:
   Description: Force use of single or double quotes when no interpolation
