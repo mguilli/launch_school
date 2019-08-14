@@ -25,7 +25,7 @@ def shuffle_cards
   deck.shuffle
 end
 
-def deal_cards(deck, number_cards=1)
+def deal_cards!(deck, number_cards=1)
   deck.unshift(shuffle_cards).flatten! if deck.size < number_cards
   cards = []
   number_cards.times { cards << deck.pop }
@@ -87,21 +87,23 @@ def bust?(total)
   total > MAX_HAND_SUM
 end
 
-def determine_winner(dlr_total, plr_total, scores)
+def update_scores!(scores, winner)
+  scores[winner.downcase.to_sym] += 1 unless winner == "Tie"
+end
+
+def determine_winner(dlr_total, plr_total)
   player_names = %w[Dealer Player]
 
-  winner = if bust?(plr_total)
-             player_names[0]
-           elsif bust?(dlr_total)
-             player_names[1]
-           else
-             compare = [dlr_total, plr_total]
-             return "Tie" if compare[0] == compare[1]
+  if bust?(plr_total)
+    player_names[0]
+  elsif bust?(dlr_total)
+    player_names[1]
+  else
+    compare = [dlr_total, plr_total]
+    return "Tie" if compare[0] == compare[1]
 
-             player_names[compare.index(compare.max)]
-           end
-  scores[winner.downcase.to_sym] += 1
-  winner
+    player_names[compare.index(compare.max)]
+  end
 end
 
 def play_again?
@@ -128,8 +130,8 @@ deck = shuffle_cards
 scores = {dealer: 0, player: 0}
 
 loop do
-  dealer_hand = deal_cards(deck, 2)
-  player_hand = deal_cards(deck, 2)
+  dealer_hand = deal_cards!(deck, 2)
+  player_hand = deal_cards!(deck, 2)
   dlr_total = hand_total(dealer_hand)
   plr_total = hand_total(player_hand)
 
@@ -146,7 +148,7 @@ loop do
     end
 
     if choice == 'h'
-      player_hand += deal_cards(deck)
+      player_hand += deal_cards!(deck)
       plr_total = update_hand_total(plr_total, player_hand)
     end
     break if choice == 's' || bust?(plr_total)
@@ -155,13 +157,14 @@ loop do
   # Dealers turn if player did not bust
   unless bust?(plr_total)
     until dlr_total >= DEALER_STAYS
-      dealer_hand += deal_cards(deck)
+      dealer_hand += deal_cards!(deck)
       dlr_total = update_hand_total(dlr_total, dealer_hand)
     end
   end
 
   # Determine winner
-  winner = determine_winner(dlr_total, plr_total, scores)
+  winner = determine_winner(dlr_total, plr_total)
+  update_scores!(scores, winner)
   grand_winner = grand_winner(scores)
   if grand_winner
     winner = grand_winner
