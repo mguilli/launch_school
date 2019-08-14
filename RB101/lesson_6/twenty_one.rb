@@ -6,8 +6,9 @@ FACE_VALUE = 10
 ACE = 'A'
 ACE_VALUE = 11
 ACE_ALTERNATE_VALUE = 1
+DEALER_STAYS = 17
 MAX_HAND_SUM = 21
-PLAYER_NAMES = %w[Dealer Player]
+POINTS_TO_WIN = 5
 
 def shuffle_cards
   deck = CARDS.map do |card|
@@ -31,7 +32,7 @@ def deal_cards(deck, number_cards=1)
   cards
 end
 
-def show_hand(hand, show_all=false)
+def cards_string(hand, show_all=false)
   if show_all
     "[ #{hand.map { |card| card[:face] }.join(', ')} ]"
   else
@@ -53,14 +54,19 @@ def hand_total(hand)
   sum
 end
 
-def print_game_table(dlr_hand, plr_hand, dlr_total, plr_total, show_dlr=false)
-  dealer_str = if show_dlr
-                 show_hand(dlr_hand, true) + " = #{dlr_total}"
-               else
-                 show_hand(dlr_hand)
-               end
+def generate_dealer_string(show_dlr, dlr_hand, dlr_total)
+  if show_dlr
+    cards_string(dlr_hand, true) + " = #{dlr_total}"
+  else
+    cards_string(dlr_hand)
+  end
+end
 
-  player_str = show_hand(plr_hand, true) + " = #{plr_total}"
+def print_game_table(args, show_dlr=false, instructions=true)
+  dlr_hand, plr_hand, dlr_total, plr_total, scores = args
+
+  dealer_str = generate_dealer_string(show_dlr, dlr_hand, dlr_total)
+  player_str = cards_string(plr_hand, true) + " = #{plr_total}"
 
   player_str << ' *BUST*' if bust?(plr_total)
   dealer_str << ' *BUST*' if bust?(dlr_total)
@@ -72,25 +78,30 @@ def print_game_table(dlr_hand, plr_hand, dlr_total, plr_total, show_dlr=false)
     Dealer has: #{dealer_str}
     Player has: #{player_str}
     ---------------------------------
-    Press 'h' to Hit, or 's' to Stay.
+    Games won (Dealer:Player) = #{scores[:dealer]}:#{scores[:player]}
   MSG
+  puts "\nPress 'h' to Hit, or 's' to Stay." if instructions
 end
 
 def bust?(total)
   total > MAX_HAND_SUM
 end
 
-def determine_winner(dlr_total, plr_total)
-  if bust?(plr_total)
-    PLAYER_NAMES[0]
-  elsif bust?(dlr_total)
-    PLAYER_NAMES[1]
-  else
-    compare = [dlr_total, plr_total]
-    return "Tie" if compare[0] == compare[1]
+def determine_winner(dlr_total, plr_total, scores)
+  player_names = %w[Dealer Player]
 
-    PLAYER_NAMES[compare.index(compare.max)]
-  end
+  winner = if bust?(plr_total)
+             player_names[0]
+           elsif bust?(dlr_total)
+             player_names[1]
+           else
+             compare = [dlr_total, plr_total]
+             return "Tie" if compare[0] == compare[1]
+
+             player_names[compare.index(compare.max)]
+           end
+  scores[winner.downcase.to_sym] += 1
+  winner
 end
 
 def play_again?
@@ -99,7 +110,7 @@ def play_again?
   true if gets[0].downcase == 'y'
 end
 
-def update_total(total, hand)
+def update_hand_total(total, hand)
   if hand.any? { |card| card[:face][0] == ACE }
     hand_total(hand)
   else
@@ -107,7 +118,14 @@ def update_total(total, hand)
   end
 end
 
+def grand_winner(scores)
+  # return string or nil
+  result = scores.find { |_, val| val >= POINTS_TO_WIN }
+  result[0].to_s.capitalize if result
+end
+
 deck = shuffle_cards
+scores = {dealer: 0, player: 0}
 
 loop do
   dealer_hand = deal_cards(deck, 2)
@@ -117,7 +135,7 @@ loop do
 
   # Players turn
   loop do
-    print_game_table(dealer_hand, player_hand, dlr_total, plr_total)
+    print_game_table([dealer_hand, player_hand, dlr_total, plr_total, scores])
     choice = ''
     loop do
       print "=> "
@@ -128,25 +146,39 @@ loop do
     end
 
     if choice == 'h'
-      player_hand += deal_cards(deck) 
-      plr_total = update_total(plr_total, player_hand)
+      player_hand += deal_cards(deck)
+      plr_total = update_hand_total(plr_total, player_hand)
     end
     break if choice == 's' || bust?(plr_total)
   end
 
-  # Dealers turn
+  # Dealers turn if player did not bust
   unless bust?(plr_total)
-    until dlr_total >= 17
+    until dlr_total >= DEALER_STAYS
       dealer_hand += deal_cards(deck)
-      dlr_total = update_total(dlr_total, dealer_hand)
+      dlr_total = update_hand_total(dlr_total, dealer_hand)
     end
   end
 
-  winner = determine_winner(dlr_total, plr_total)
+  # Determine winner
+  winner = determine_winner(dlr_total, plr_total, scores)
+  grand_winner = grand_winner(scores)
+  if grand_winner
+    winner = grand_winner
+    msg = 'Grand '
+  else
+    msg = ''
+  end
 
-  print_game_table(dealer_hand, player_hand, dlr_total, plr_total, true)
-  puts "\nThe winner is... #{winner}!!!"
+  args = [dealer_hand, player_hand, dlr_total, plr_total, scores]
+  print_game_table(args, true, false)
+
+  puts "\nThe #{msg}Winner is... #{winner}!!!"
   puts ''
+
+  # Reset scores if there has been a grand winner
+  scores.each_key { |key| scores[key] = 0 } if grand_winner
+
   break unless play_again?
 end
 
