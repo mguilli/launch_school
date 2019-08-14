@@ -3,6 +3,7 @@ require 'pry'
 SUITS = %w[♥ ♠ ♦ ♣]
 CARDS = %w[2 3 4 5 6 7 8 9 10 J Q K A].product(SUITS).map(&:join)
 FACE_VALUE = 10
+ACE = 'A'
 ACE_VALUE = 11
 ACE_ALTERNATE_VALUE = 1
 MAX_HAND_SUM = 21
@@ -12,7 +13,7 @@ def shuffle_cards
   deck = CARDS.map do |card|
     face = card[0..-2].to_i
     value = if face == 0
-              card[0] == 'A' ? ACE_VALUE : FACE_VALUE
+              card[0] == ACE ? ACE_VALUE : FACE_VALUE
             else
               face
             end
@@ -52,17 +53,17 @@ def hand_total(hand)
   sum
 end
 
-def print_game_table(dealer_hand, player_hand, show_dealers_hand=false)
-  dealer_str = if show_dealers_hand
-                 show_hand(dealer_hand, true) + " = #{hand_total(dealer_hand)}"
+def print_game_table(dlr_hand, plr_hand, dlr_total, plr_total, show_dlr=false)
+  dealer_str = if show_dlr
+                 show_hand(dlr_hand, true) + " = #{dlr_total}"
                else
-                 show_hand(dealer_hand)
+                 show_hand(dlr_hand)
                end
 
-  player_str = show_hand(player_hand, true) + " = #{hand_total(player_hand)}"
+  player_str = show_hand(plr_hand, true) + " = #{plr_total}"
 
-  player_str << ' *BUST*' if bust?(player_hand)
-  dealer_str << ' *BUST*' if bust?(dealer_hand)
+  player_str << ' *BUST*' if bust?(plr_total)
+  dealer_str << ' *BUST*' if bust?(dlr_total)
 
   system('clear') || system('cls')
   puts <<~MSG
@@ -75,17 +76,17 @@ def print_game_table(dealer_hand, player_hand, show_dealers_hand=false)
   MSG
 end
 
-def bust?(hand)
-  hand_total(hand) > MAX_HAND_SUM
+def bust?(total)
+  total > MAX_HAND_SUM
 end
 
-def determine_winner(dealer_hand, player_hand)
-  if bust?(player_hand)
+def determine_winner(dlr_total, plr_total)
+  if bust?(plr_total)
     PLAYER_NAMES[0]
-  elsif bust?(dealer_hand)
+  elsif bust?(dlr_total)
     PLAYER_NAMES[1]
   else
-    compare = [hand_total(dealer_hand), hand_total(player_hand)]
+    compare = [dlr_total, plr_total]
     return "Tie" if compare[0] == compare[1]
 
     PLAYER_NAMES[compare.index(compare.max)]
@@ -98,15 +99,25 @@ def play_again?
   true if gets[0].downcase == 'y'
 end
 
+def update_total(total, hand)
+  if hand.any? { |card| card[:face][0] == ACE }
+    hand_total(hand)
+  else
+    total + hand.last[:value]
+  end
+end
+
 deck = shuffle_cards
 
 loop do
   dealer_hand = deal_cards(deck, 2)
   player_hand = deal_cards(deck, 2)
+  dlr_total = hand_total(dealer_hand)
+  plr_total = hand_total(player_hand)
 
   # Players turn
   loop do
-    print_game_table(dealer_hand, player_hand)
+    print_game_table(dealer_hand, player_hand, dlr_total, plr_total)
     choice = ''
     loop do
       print "=> "
@@ -115,20 +126,25 @@ loop do
 
       puts "Incorrect selection. Please try again."
     end
-    player_hand += deal_cards(deck) if choice == 'h'
-    break if choice == 's' || bust?(player_hand)
+
+    if choice == 'h'
+      player_hand += deal_cards(deck) 
+      plr_total = update_total(plr_total, player_hand)
+    end
+    break if choice == 's' || bust?(plr_total)
   end
 
   # Dealers turn
-  unless bust?(player_hand)
-    until hand_total(dealer_hand) >= 17
+  unless bust?(plr_total)
+    until dlr_total >= 17
       dealer_hand += deal_cards(deck)
+      dlr_total = update_total(dlr_total, dealer_hand)
     end
   end
 
-  winner = determine_winner(dealer_hand, player_hand)
+  winner = determine_winner(dlr_total, plr_total)
 
-  print_game_table(dealer_hand, player_hand, true)
+  print_game_table(dealer_hand, player_hand, dlr_total, plr_total, true)
   puts "\nThe winner is... #{winner}!!!"
   puts ''
   break unless play_again?
