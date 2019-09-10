@@ -1,6 +1,6 @@
-require 'pry'
 def bubble_sort!(array)
   n = array.size
+
   loop do
     last_swap = 0
     i = 1
@@ -12,7 +12,7 @@ def bubble_sort!(array)
       end
       i += 1
     end
-    # binding.pry
+
     n = last_swap
     break if n <= 1
   end
