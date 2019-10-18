@@ -1,44 +1,30 @@
-require 'pry' # TODO Delete
 class Move
   attr_reader :value
-  VALUES = %w(rock paper scissors)
+  VALUES = %w(rock paper scissors spock lizard)
 
   def initialize(value)
     @value = value
   end
 
-  def scissors?
-    @value == 'scissors'
-  end
-
-  def rock?
-    @value == 'rock'
-  end
-
-  def paper?
-    @value == 'paper'
-  end
-
   def >(other_move)
-    rock? && other_move.scissors? ||
-      paper? && other_move.rock? ||
-      scissors? && other_move.paper?
+    x, y = [value, other_move.value].map { |m| VALUES.index(m) }
+    (x > y) ^ ((x - y).abs == 2 || (x - y).abs == 4)
   end
-
+  
   def <(other_move)
-    rock? && other_move.paper? ||
-      paper? && other_move.scissors? ||
-      scissors? && other_move.rock?
+    x, y = [value, other_move.value].map { |m| VALUES.index(m) }
+    (x < y) ^ ((x - y).abs == 2 || (x - y).abs == 4)
   end
 end
 
 class Player
   attr_accessor :move, :name
-  attr_reader :score
+  attr_reader :score, :history
 
   def initialize
     set_name
     @score = 0
+    @history = []
   end
 
   def award_point
@@ -63,13 +49,14 @@ class Human < Player
     choice = nil
 
     loop do
-      puts 'Please choose rock, paper, or scissors:'
+      puts "Please choose: #{Move::VALUES}"
       choice = gets.chomp
       break if Move::VALUES.include? choice
       puts 'Invalid choice.'
     end
 
     self.move = Move.new choice
+    self.history << choice
   end
 end
 
@@ -80,6 +67,7 @@ class Computer < Player
 
   def choose
     self.move = Move.new(Move::VALUES.sample)
+    self.history << move.value
   end
 end
 
@@ -99,6 +87,8 @@ class RPSGame
 
   def display_goodbye_message
     puts 'Thanks for playing RPS!'
+    puts "Game history ([#{human.name}, #{computer.name}]):"
+    human.history.zip(computer.history).each { |pair| p pair }
   end
 
   def display_moves
