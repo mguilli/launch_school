@@ -78,17 +78,18 @@ class Square
   end
 end
 
-class Player
-  attr_reader :marker
+# class Player
+#   attr_reader :marker
 
-  def initialize(marker)
-    @marker = marker
-  end
-end
+#   def initialize(marker)
+#     @marker = marker
+#   end
+# end
 
 class TTTGame
   HUMAN_MARKER = 'X'
   COMPUTER_MARKER = 'O'
+  Player = Struct.new(:marker)
 
   def initialize
     @board = Board.new
