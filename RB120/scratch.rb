@@ -1,22 +1,5 @@
-module Specialty
-  # def initialize(value)
-  #   @module = value
-  # end
-end
+z = [1,2].cycle
 
-class SuperClass
-  def initialize(value)
-    @superclass = value
-  end
-end
+z.next if false
 
-class SubClass < SuperClass
-  include Specialty
-  def initialize(value, other_value)
-    @subclass = other_value
-    super(value)
-  end
-end
-
-p SubClass.ancestors
-p SubClass.new(10, 42)
+p z.peek
