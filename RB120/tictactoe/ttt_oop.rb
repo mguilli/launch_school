@@ -106,24 +106,65 @@ class Square
   end
 end
 
-class TTTGame
-  HUMAN_MARKER = 'X'
-  COMPUTER_MARKER = 'O'
-  FIRST_PLAYER = :choose # options = [:human, :computer, :choose]
-  SCORE_TO_WIN = 5
-  INVALID_SELECTION = 'Invalid selection. Please try again.'
+class Player
+  INVALID_SELECTION = "Invalid selection. Please try again."
+  attr_reader :marker, :name
+  attr_accessor :score
 
-  Player = Struct.new(:marker, :score)
+  def initialize
+    @score = 0
+  end
+end
+
+class HumanPlayer < Player
+  def select_marker
+    choice = nil
+
+    loop do
+      puts "Select any single character to use as a marker: "
+      choice = gets.chomp
+      break if choice.length == 1
+
+      puts INVALID_SELECTION
+    end
+
+    @marker = choice
+  end
+
+  def select_name
+    puts "Select a name: "
+    @name = gets.chomp
+  end
+end
+
+class ComputerPlayer < Player
+  COMPUTER_NAMES = %w(R2D2 Robocop SkyNet Hal Wall-E)
+  MARKER_DEFAULTS = %w(O X)
+
+  def select_marker(disallowed: nil)
+    @marker = (MARKER_DEFAULTS - [disallowed]).first
+  end
+
+  def select_name(disallowed: nil)
+    @name = (COMPUTER_NAMES - [disallowed]).sample
+  end
+end
+
+class TTTGame
+  FIRST_PLAYER = :choose # options = [:human, :computer, :choose]
+  SCORE_TO_WIN = 2
+  INVALID_SELECTION = 'Invalid selection. Please try again.'
 
   def initialize
     @board = Board.new
-    @human = Player.new(HUMAN_MARKER, 0)
-    @computer = Player.new(COMPUTER_MARKER, 0)
+    @human = HumanPlayer.new
+    @computer = ComputerPlayer.new
     @players = [human, computer]
   end
 
   def play
     display_welcome_message
+    select_names_and_markers
     select_first_player
     play_again = nil
     welcome_display = true
@@ -155,6 +196,13 @@ class TTTGame
       clear_screen_and_display_board(welcome_display, play_again)
       welcome_display = play_again = false
     end
+  end
+
+  def select_names_and_markers
+    human.select_name
+    computer.select_name(disallowed: human.name)
+    human.select_marker
+    computer.select_marker(disallowed: human.marker)
   end
 
   def select_first_player
@@ -202,6 +250,7 @@ class TTTGame
   def display_welcome_message
     clear_screen
     puts 'Welcome to Tic Tac Toe!'
+    puts "Win #{SCORE_TO_WIN} games to be named Grand Winner."
     puts ''
   end
 
@@ -210,7 +259,8 @@ class TTTGame
   end
 
   def display_board
-    puts "You're a #{human.marker}. Computer is a #{computer.marker}"
+    puts "#{human.name} is a #{human.marker}." \
+         " #{computer.name} is a #{computer.marker}"
     puts ""
     board.draw
     puts ""
@@ -218,8 +268,8 @@ class TTTGame
 
   def display_grand_winner
     case grand_winner.marker
-    when HUMAN_MARKER then puts "You are the Grand Winner!"
-    when COMPUTER_MARKER then puts "Computer is the Grand Winner!"
+    when human.marker then puts "#{human.name} is the Grand Winner!"
+    when computer.marker then puts "#{computer.name} is the Grand Winner!"
     end
   end
 
@@ -227,14 +277,17 @@ class TTTGame
     clear_screen_and_display_board
 
     case board.winning_marker
-    when HUMAN_MARKER
-      puts "You won!"
-    when COMPUTER_MARKER
-      puts "Computer won!"
+    when human.marker
+      puts "#{human.name} won!"
+    when computer.marker
+      puts "#{computer.name} won!"
     else
       puts "It's a tie!"
     end
-    puts "Scores [Human, Computer] = #{[human.score, computer.score]}"
+
+    puts "Scores [#{human.name}, #{computer.name}] =" \
+         " #{[human.score, computer.score]}"
+
     display_grand_winner if grand_winner
   end
 
@@ -286,8 +339,8 @@ class TTTGame
 
   def award_point_to_winner
     case board.winning_marker
-    when HUMAN_MARKER then human.score += 1
-    when COMPUTER_MARKER then computer.score += 1
+    when human.marker then human.score += 1
+    when computer.marker then computer.score += 1
     end
   end
 
