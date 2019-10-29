@@ -108,11 +108,14 @@ end
 
 class Player
   INVALID_SELECTION = "Invalid selection. Please try again."
-  attr_reader :marker, :name
-  attr_accessor :score
+  attr_reader :marker, :name, :score
 
   def initialize
     @score = 0
+  end
+
+  def increase_score_by(number_of_points)
+    @score += number_of_points
   end
 end
 
@@ -178,6 +181,7 @@ class TTTGame
       award_point_to_winner
       display_winner_and_scores
       break unless !grand_winner && (play_again = play_again?)
+
       reset_board
     end
 
@@ -339,8 +343,8 @@ class TTTGame
 
   def award_point_to_winner
     case board.winning_marker
-    when human.marker then human.score += 1
-    when computer.marker then computer.score += 1
+    when human.marker then human.increase_score_by(1)
+    when computer.marker then computer.increase_score_by(1)
     end
   end
 
