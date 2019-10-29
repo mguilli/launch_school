@@ -1,5 +1,3 @@
-require 'pry' # TODO delete
-
 class Board
   WINNING_LINES = [[1, 2, 3], [4, 5, 6], [7, 8, 9]] +
                   [[1, 4, 7], [2, 5, 8], [3, 6, 9]] +
@@ -58,9 +56,9 @@ class Board
     !!winning_marker
   end
 
-  def find_optimal_square_num(marker)
-    optimal_line = WINNING_LINES.find { |line| two_in_row?(line, marker) }
-    optimal_line&.find { |key| @squares[key].unmarked? } # if optimal_line
+  def square_number_to_win(marker)
+    good_line = WINNING_LINES.find { |line| two_markers_in_line?(line, marker) }
+    good_line&.find { |key| @squares[key].unmarked? }
   end
 
   def winning_marker
@@ -76,7 +74,7 @@ class Board
     [squares, markers]
   end
 
-  def two_in_row?(line, marker)
+  def two_markers_in_line?(line, marker)
     squares, markers = get_squares_and_markers(line)
     squares.one?(&:unmarked?) && markers.count(marker) == 2
   end
@@ -114,6 +112,7 @@ class TTTGame
   FIRST_PLAYER = :choose # options = [:human, :computer, :choose]
   SCORE_TO_WIN = 5
   INVALID_SELECTION = 'Invalid selection. Please try again.'
+
   Player = Struct.new(:marker, :score)
 
   def initialize
@@ -121,26 +120,23 @@ class TTTGame
     @human = Player.new(HUMAN_MARKER, 0)
     @computer = Player.new(COMPUTER_MARKER, 0)
     @players = [human, computer]
-    reset_turn_order
   end
 
   def play
     display_welcome_message
     select_first_player
+    play_again = nil
+    welcome_display = true
 
     loop do
-      display_board
+      clear_screen_and_display_board(welcome_display, play_again)
 
-      loop do
-        current_player_moves
-        break if board.someone_won? || board.full?
+      players_take_turns(welcome_display, play_again)
+      welcome_display = false
 
-        clear_screen_and_display_board if human_turn?
-      end
-
-      award_point
-      display_result
-      break unless !grand_winner && play_again?
+      award_point_to_winner
+      display_winner_and_scores
+      break unless !grand_winner && (play_again = play_again?)
       reset_board
     end
 
@@ -151,16 +147,56 @@ class TTTGame
 
   attr_reader :board, :human, :computer, :current_player, :players
 
-  def clear_screen
-    system 'clear'
+  def players_take_turns(welcome_display, play_again)
+    loop do
+      current_player_moves
+      break if board.someone_won? || board.full?
+
+      clear_screen_and_display_board(welcome_display, play_again)
+      welcome_display = play_again = false
+    end
   end
 
-  def grand_winner
-    players.find { |player| player.score >= SCORE_TO_WIN }
+  def select_first_player
+    choice = nil
+    options = { c: :computer, h: :human }
+
+    if FIRST_PLAYER == :choose
+      loop do
+        puts "Choose who goes first (h = human, c = computer):"
+        choice = gets.chomp.downcase.to_sym
+        break if options.keys.include? choice
+
+        puts INVALID_SELECTION
+      end
+    end
+
+    @first_player = options[choice] || FIRST_PLAYER
+    reset_turn_order
   end
 
   def reset_turn_order
     @current_player = players.cycle
+    current_player.next if @first_player == :computer
+  end
+
+  def reset_board
+    board.reset
+    reset_turn_order
+    clear_screen
+    puts "Let's play again!"
+    puts ''
+  end
+
+  def clear_screen
+    system 'clear'
+  end
+
+  def clear_screen_and_display_board(welcome = false, play_msg = false)
+    clear_screen
+    display_welcome_message if welcome
+    puts "Let's play again!", '' if play_msg
+    display_board
   end
 
   def display_welcome_message
@@ -173,16 +209,45 @@ class TTTGame
     puts 'Thanks for playing Tic Tac Toe! Goodbye!'
   end
 
-  def clear_screen_and_display_board
-    clear_screen
-    display_board
-  end
-
   def display_board
     puts "You're a #{human.marker}. Computer is a #{computer.marker}"
     puts ""
     board.draw
     puts ""
+  end
+
+  def display_grand_winner
+    case grand_winner.marker
+    when HUMAN_MARKER then puts "You are the Grand Winner!"
+    when COMPUTER_MARKER then puts "Computer is the Grand Winner!"
+    end
+  end
+
+  def display_winner_and_scores
+    clear_screen_and_display_board
+
+    case board.winning_marker
+    when HUMAN_MARKER
+      puts "You won!"
+    when COMPUTER_MARKER
+      puts "Computer won!"
+    else
+      puts "It's a tie!"
+    end
+    puts "Scores [Human, Computer] = #{[human.score, computer.score]}"
+    display_grand_winner if grand_winner
+  end
+
+  def human_turn?
+    current_player.peek == human
+  end
+
+  def current_player_moves
+    if current_player.next == human
+      human_moves
+    else
+      computer_moves
+    end
   end
 
   def human_moves
@@ -198,54 +263,36 @@ class TTTGame
     board[square_number] = human.marker
   end
 
-  def can_win_on_next_move?(player)
-    !!board.find_optimal_square_num(player.marker)
+  def computer_moves
+    square_number = if middle_square_available?
+                      Board::MIDDLE_SQUARE
+                    elsif can_win_on_next_move?(computer)
+                      board.square_number_to_win(computer.marker)
+                    elsif can_win_on_next_move?(human)
+                      board.square_number_to_win(human.marker)
+                    else
+                      board.unmarked_keys.sample
+                    end
+    board[square_number] = computer.marker
   end
 
   def middle_square_available?
     board.unmarked_keys.include?(Board::MIDDLE_SQUARE)
   end
 
-  def computer_moves
-    if middle_square_available?
-      square_number = Board::MIDDLE_SQUARE
-    elsif can_win_on_next_move?(computer)
-      square_number = board.find_optimal_square_num(computer.marker)
-    elsif can_win_on_next_move?(human)
-      square_number = board.find_optimal_square_num(human.marker)
-    else
-      square_number = board.unmarked_keys.sample
-    end
-    board[square_number] = computer.marker
+  def can_win_on_next_move?(player)
+    !!board.square_number_to_win(player.marker)
   end
 
-  def award_point
+  def award_point_to_winner
     case board.winning_marker
     when HUMAN_MARKER then human.score += 1
     when COMPUTER_MARKER then computer.score += 1
     end
   end
 
-  def display_grand_winner
-    case grand_winner.marker
-    when HUMAN_MARKER then puts "You are the Grand Winner!"
-    when COMPUTER_MARKER then puts "Computer is the Grand Winner!"
-    end
-  end
-
-  def display_result
-    clear_screen_and_display_board
-
-    case board.winning_marker
-    when HUMAN_MARKER
-      puts "You won!"
-    when COMPUTER_MARKER
-      puts "Computer won!"
-    else
-      puts "It's a tie!"
-    end
-    puts "Scores [Human, Computer] = #{[human.score, computer.score]}"
-    display_grand_winner if grand_winner
+  def grand_winner
+    players.find { |player| player.score >= SCORE_TO_WIN }
   end
 
   def play_again?
@@ -259,42 +306,6 @@ class TTTGame
     end
 
     answer == 'y'
-  end
-
-  def reset_board
-    board.reset
-    reset_turn_order
-    clear_screen
-    puts "Let's play again!"
-    puts ''
-  end
-
-  def current_player_moves
-    if current_player.next == human
-      human_moves
-    else
-      computer_moves
-    end
-  end
-
-  def human_turn?
-    current_player.peek == human
-  end
-
-  def select_first_player
-    choice = nil
-
-    if FIRST_PLAYER == :choose
-      loop do
-        puts "Choose who goes first (h = human, c = computer):"
-        choice = gets.chomp.downcase
-        break(clear_screen) if %w(c h).include? choice
-
-        puts INVALID_SELECTION
-      end
-    end
-
-    current_player.next if FIRST_PLAYER == :computer || choice == 'c'
   end
 end
 
