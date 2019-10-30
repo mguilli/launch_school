@@ -1,10 +1,11 @@
 require 'pry'
 
 class Participant
-  attr_reader :hand
+  attr_reader :name
 
-  def initialize
+  def initialize(name)
     @hand = []
+    @name = name
   end
 
   def hit(*cards)
@@ -21,6 +22,11 @@ class Participant
   
   def total
     
+  end
+
+  def hand(hidden: false)
+    first_card = hidden ? 'hidden' : @hand[0]
+    "[#{first_card}, #{@hand[1..-1].join(', ')}]"
   end
 end
 
@@ -76,15 +82,15 @@ end
 class Game
   def initialize
     @deck = Deck.new
-    @player = Player.new
-    @dealer = Dealer.new
+    @player = Player.new('Player')
+    @dealer = Dealer.new('Dealer')
   end
 
   def start
     show_welcome_message
     deal_cards
-    binding.pry
     show_initial_cards
+    binding.pry
     player_turn
     dealer_turn
     show_result
@@ -103,6 +109,13 @@ class Game
       player.hit(deck.deal)
       dealer.hit(deck.deal)
     end
+  end
+
+  def show_initial_cards
+    # dealer.show_hand(hidden: true)
+    # puts "Player: [#{player.hand.join(', ')}]"
+    puts "#{dealer.name}: #{dealer.hand(hidden: true)}"
+    puts "#{player.name}: #{player.hand}"
   end
 end
 
