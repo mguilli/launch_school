@@ -27,6 +27,7 @@ class Board
     puts "  #{@squares[7]}  |  #{@squares[8]}  |  #{@squares[9]}"
     puts "     |     |"
   end
+  # rubocop:enable Metrics/AbcSize
 
   def []=(square_number, marker)
     @squares[square_number].marker = marker
@@ -126,7 +127,7 @@ class HumanPlayer < Player
     loop do
       puts "Select any single character to use as a marker: "
       choice = gets.chomp
-      break if choice.length == 1
+      break if choice.length == 1 && choice.match?(/\S/)
 
       puts INVALID_SELECTION
     end
@@ -135,8 +136,16 @@ class HumanPlayer < Player
   end
 
   def select_name
-    puts "Select a name: "
-    @name = gets.chomp
+    choice = nil
+    loop do
+      puts "Select a name (no spaces allowed): "
+      choice = gets.chomp
+      break if choice.match?(/^\S+$/)
+
+      puts INVALID_SELECTION
+    end
+
+    @name = choice
   end
 end
 
@@ -277,9 +286,7 @@ class TTTGame
     end
   end
 
-  def display_winner_and_scores
-    clear_screen_and_display_board
-
+  def display_winner
     case board.winning_marker
     when human.marker
       puts "#{human.name} won!"
@@ -288,7 +295,12 @@ class TTTGame
     else
       puts "It's a tie!"
     end
+  end
 
+  def display_winner_and_scores
+    clear_screen_and_display_board
+
+    display_winner
     puts "Scores [#{human.name}, #{computer.name}] =" \
          " #{[human.score, computer.score]}"
 
@@ -321,24 +333,15 @@ class TTTGame
   end
 
   def computer_moves
-    square_number = if middle_square_available?
-                      Board::MIDDLE_SQUARE
-                    elsif can_win_on_next_move?(computer)
-                      board.square_number_to_win(computer.marker)
-                    elsif can_win_on_next_move?(human)
-                      board.square_number_to_win(human.marker)
-                    else
-                      board.unmarked_keys.sample
-                    end
+    square_number = middle_square ||
+                    board.square_number_to_win(computer.marker) ||
+                    board.square_number_to_win(human.marker) ||
+                    board.unmarked_keys.sample
     board[square_number] = computer.marker
   end
 
-  def middle_square_available?
-    board.unmarked_keys.include?(Board::MIDDLE_SQUARE)
-  end
-
-  def can_win_on_next_move?(player)
-    !!board.square_number_to_win(player.marker)
+  def middle_square
+    board.unmarked_keys.find { |v| v == Board::MIDDLE_SQUARE }
   end
 
   def award_point_to_winner
