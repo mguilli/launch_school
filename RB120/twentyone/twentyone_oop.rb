@@ -19,8 +19,9 @@ class Participant
 
     if sum > MAX_HAND_SUM
       number_aces = @hand.count(&:ace?)
-
-      number_aces.times { sum -= Card::FACE_VALUE }
+      number_aces.times do
+        sum -= Card::FACE_VALUE if sum > MAX_HAND_SUM
+      end
     end
 
     sum
