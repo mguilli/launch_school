@@ -135,6 +135,8 @@ class Game
 
       discard_player_cards
     end
+
+    puts "Thanks for playing!"
   end
 
   private
