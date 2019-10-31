@@ -44,14 +44,14 @@ end
 class Player < Participant
   def choose_name
     puts "What is your name?"
-    print '=> '
-
+    
     choice = nil
     loop do
-      choice = gets.chomp
-      break if choice.match?(/\S+/)
+      print '=> '
+      choice = gets.chomp.strip.squeeze(' ')
+      break if choice.match?(/^[[:alpha:]]+/) && choice.size <= 20
 
-      puts Game::INVALID_INPUT
+      puts Game::INVALID_INPUT + ' Name must start with a letter.'
     end
 
     @name = choice
