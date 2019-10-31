@@ -68,10 +68,10 @@ class Deck
   CARDS = %w(2 3 4 5 6 7 8 9 10 J Q K A).product(%w(♥ ♠ ♦ ♣))
 
   def initialize
-    shuffle
+    shuffle!
   end
 
-  def shuffle
+  def shuffle!
     cards = CARDS.map do |face, suit|
       Card.new(face, suit)
     end
@@ -80,7 +80,7 @@ class Deck
   end
 
   def deal_card
-    shuffle if @cards.empty?
+    shuffle! if @cards.empty?
     @cards.pop
   end
 end
