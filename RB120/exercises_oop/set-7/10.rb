@@ -47,56 +47,82 @@ class Card
 end
 
 class PokerHand
+  RESPONSES = {
+    royal_flush?: 'Royal flush',
+    straight_flush?: 'Straight flush',
+    four_of_a_kind?: 'Four of a kind',
+    full_house?: 'Full house',
+    flush?: 'Flush',
+    straight?: 'Straight',
+    three_of_a_kind?: 'Three of a kind',
+    two_pair?: 'Two pair',
+    pair?: 'Pair',
+    high?: 'High card'
+  }
+
   def initialize(deck)
     @hand = []
     5.times { @hand << deck.draw }
   end
 
   def print
+    puts @hand
   end
 
   def evaluate
-    case
-    when royal_flush?     then 'Royal flush'
-    when straight_flush?  then 'Straight flush'
-    when four_of_a_kind?  then 'Four of a kind'
-    when full_house?      then 'Full house'
-    when flush?           then 'Flush'
-    when straight?        then 'Straight'
-    when three_of_a_kind? then 'Three of a kind'
-    when two_pair?        then 'Two pair'
-    when pair?            then 'Pair'
-    else                       'High card'
-    end
+    methods = RESPONSES.keys[0..-2]
+    result = methods.find { |method| send method } || :high?
+    RESPONSES[result]
   end
 
   private
 
   def royal_flush?
+    straight_flush? && @hand.max.rank == 'Ace'
   end
 
   def straight_flush?
+    straight? && flush?
   end
 
   def four_of_a_kind?
+    n_of_a_kind?(4)
   end
 
   def full_house?
+    pair? && three_of_a_kind?
   end
 
   def flush?
+    @hand.map(&:suit).uniq.size == 1
   end
 
   def straight?
+    values = card_values
+    (values.max - values.min) == 4 && values.uniq.size == 5
   end
 
   def three_of_a_kind?
+    n_of_a_kind?(3)
   end
 
   def two_pair?
+    values = card_values
+    values.map { |v| values.count v }.count(2) == 4
   end
 
   def pair?
+    n_of_a_kind?(2)
+  end
+
+  def card_values
+    @hand.map(&:value)
+  end
+
+  def n_of_a_kind?(number_of_instances)
+    values = card_values
+    values.map! { |v| values.count v }
+    values.include?(number_of_instances)
   end
 end
 
