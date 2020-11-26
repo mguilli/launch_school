@@ -1,2 +1,4 @@
 *.code-workspace
 .solargraph.yml
+scratch.rb
+.ruby-version
